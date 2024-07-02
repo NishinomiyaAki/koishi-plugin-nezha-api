@@ -1,7 +1,15 @@
 {
   "name": "koishi-plugin-nezha-api",
-  "description": "通过哪吒面板API查询服务器信息",
-  "version": "0.0.1",
+  "description": "通过哪吒面板API查询服务器详细信息",
+  "homepage": "https://github.com/NishinomiyaAki/koishi-plugin-nezha-api#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NishinomiyaAki/koishi-plugin-nezha-api.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NishinomiyaAki/koishi-plugin-nezha-api/issues"
+  },
+  "version": "1.0.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -9,14 +17,20 @@
     "dist"
   ],
   "license": "MIT",
-  "scripts": {},
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "nezha"
   ],
-  "devDependencies": {},
   "peerDependencies": {
     "koishi": "^4.17.9"
+  },
+  "koishi": {
+    "service": {
+      "required": [
+        "database"
+      ]
+    }
   }
 }
