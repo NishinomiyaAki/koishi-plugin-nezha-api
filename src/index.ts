@@ -314,7 +314,7 @@ export function apply(ctx: Context, config: Config) {
   const buildUrl = (baseUrl: string, path: string): string => {
     baseUrl = baseUrl.trim()
     while (baseUrl.endsWith('/')) {
-      baseUrl.substring(0, baseUrl.length - 1)
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1)
     }
     return baseUrl + path
   }
