@@ -38,7 +38,7 @@ export const Config: Schema<Config> = Schema.object({
     .default(true)
     .description('站点数据发生改动时，返回的消息中是否包含数据改动'),
   channelRecall: Schema.boolean()
-    .default(false)
+    .default(true)
     .description('是否开启群聊自动撤回'),
   recallTime: Schema.number()
     .default(15000)
