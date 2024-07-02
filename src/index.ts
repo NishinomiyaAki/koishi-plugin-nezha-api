@@ -113,11 +113,11 @@ export function apply(ctx: Context, config: Config) {
 
   const mainCmd = ctx.command('nezha', '用于查询哪吒站点服务器详细信息')
     .action(async ({ session }) => {
-      const { id } = await ctx.database.getUser(session.platform, session.userId, ['id'])
+      const { id, name } = await ctx.database.getUser(session.platform, session.userId, ['id', "name"])
       const [ data ] = await ctx.database.get('nezha_site', { userId: id })
 
       let details = [
-        `Hi ${session.username}!`,
+        `Hi ${name || session.author.nick || session.author.name || session.username}!`,
         '此插件用于查询哪吒面板服务器详细信息，哪吒面板项目文档：',
         'https://nezha.wiki/',
         '免责声明：',
@@ -133,7 +133,17 @@ export function apply(ctx: Context, config: Config) {
         details.push('没有保存的数据。')
         details.push('使用 nezha add 开始添加你的站点数据！')
       }
-      return details.join('\n')
+      const [ msgId ] = await session.sendQueued(details.join('\n'))
+      if (await inChannel(session.platform, session.channelId) && config.channelRecall) {
+        ctx.setTimeout(async () => {
+          try {
+            await session.bot.deleteMessage(session.channelId, msgId)
+          } catch (error) {
+            logger.warn(error)
+          }
+        }, config.recallTime)
+      }
+      return
     })
   
   mainCmd.subcommand('.help', '获取 nezha 相关指令的帮助信息')
