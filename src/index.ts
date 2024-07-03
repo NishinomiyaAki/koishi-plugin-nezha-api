@@ -712,7 +712,7 @@ export function apply(ctx: Context, config: Config) {
                 `平台： ${serverInfo.host.Platform} ${serverInfo.host.PlatformVersion}`,
                 `CPU信息： ${cpuInfo}`,
                 `运行时间： ${convertTime(serverInfo.host.BootTime)}`,
-                `负载： ${serverInfo.status.Load1} ${serverInfo.status.Load5} ${serverInfo.status.Load15}`,
+                `负载： ${serverInfo.status.Load1.toFixed(2)} ${serverInfo.status.Load5.toFixed(2)} ${serverInfo.status.Load15.toFixed(2)}`,
                 `CPU： ${serverInfo.status.CPU.toFixed(2)}% [${serverInfo.host.Arch}]`,
                 `内存： ${percentage(memUsage)} [${naturalsize(memUsed)}/${naturalsize(memTotal)}]`,
                 `交换： ${percentage(swapUsage)} [${naturalsize(swapUsed)}/${naturalsize(swapTotal)}]`,
