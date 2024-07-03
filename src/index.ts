@@ -342,15 +342,21 @@ export function apply(ctx: Context, config: Config) {
   }
 
   const getCpuCoreNum = (serverInfo) => {
-    const cpuInfo = serverInfo.host.CPU[0] as string
-    const cpuInfoArr = cpuInfo.split(' ')
-    if (cpuInfoArr.length >= 3) {
-      const coreNum = Number(cpuInfoArr[cpuInfoArr.length - 3])
-      if (!Number.isNaN(coreNum)) {
-        return coreNum
+    const cpuInfos = serverInfo.host.CPU
+    let totalCoreNum = 0
+    if (cpuInfos && cpuInfos.length !== 0) {
+      for (let i = 0; i < cpuInfos.length; i++) {
+        const cpuInfo = cpuInfos[i] as string
+        const cpuInfoArr = cpuInfo.split(' ')
+        if (cpuInfoArr.length >= 3) {
+          const coreNum = Number(cpuInfoArr[cpuInfoArr.length - 3])
+          if (!Number.isNaN(coreNum)) {
+            totalCoreNum += coreNum
+          }
+        }
       }
     }
-    return 0
+    return totalCoreNum
   }
 
   const naturalsize = (value: number, fractionDigits: number = 1) => {
