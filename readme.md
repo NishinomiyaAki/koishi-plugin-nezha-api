@@ -50,6 +50,10 @@
 * 基本语法：`nezha search [name:string]`
 * 指令功能：搜索名称包含关键字 `name` 的服务器状态信息摘要
 
+### 指令：nezha notify
+* 基本语法：`nezha notify`
+* 指令功能：**需要公网部署**，获取告警通知请求的部分参数，便于新增通知方式
+
 ## 配置项
 
 ### responseTimeout
@@ -66,7 +70,7 @@
 
 ### channelRecall
 * 类型：`boolean`
-* 默认值：`false`
+* 默认值：`true`
 
 是否开启群聊自动撤回
 
@@ -81,6 +85,24 @@
 * 默认值：`300`
 
 判断服务器是否在线的时间间隔（单位为秒）
+
+### alertNotify.enable
+* 类型：`boolean`
+* 默认值：`true`
+
+是否开启告警通知监听
+
+### alertNotify.path
+* 类型：`boolean`
+* 默认值：`true`
+
+告警通知监听路径
+
+### alertNotify.bodyContent
+* 类型：`boolean`
+* 默认值：`# 探针通知\\n\\n时间：#DATETIME#\\n来自: #SERVER.NAME#\\n\\n#NEZHA#`
+
+告警通知请求的body参数内容
 
 ## 致谢
 

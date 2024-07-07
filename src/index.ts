@@ -1,4 +1,5 @@
-import { Context, Logger, Schema } from 'koishi'
+import { Context, Logger, Schema, h } from 'koishi'
+import {} from '@koishijs/plugin-server'
 
 declare module 'koishi' {
   interface Tables {
@@ -15,6 +16,7 @@ export interface NezhaSite {
 export const name = 'nezha-api'
 export const inject = {
   required: ['database'],
+  optional: ['server'],
 }
 
 export const logger = new Logger('nezha-api')
@@ -25,6 +27,11 @@ export interface Config {
   channelRecall: boolean;
   recallTime: number;
   aliveThreshold: number;
+  alertNotify: {
+    enable: boolean;
+    path: string;
+    bodyContent: string;
+  };
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -51,7 +58,19 @@ export const Config: Schema<Config> = Schema.object({
     .min(5)
     .max(3600)
     .step(1)
-    .description('判断服务器是否在线的时间间隔（单位为秒）')
+    .description('判断服务器是否在线的时间间隔（单位为秒）'),
+  alertNotify: Schema.object({
+    enable: Schema.boolean()
+      .default(true)
+      .description('是否开启告警通知监听'),
+    path: Schema.string()
+      .default('/nezha/notify')
+      .description('告警通知监听路径'),
+    bodyContent: Schema.string()
+      .default(`# 探针通知\\n\\n时间：#DATETIME#\\n来自: #SERVER.NAME#\\n\\n#NEZHA#`)
+      .description('告警通知请求的body参数内容')
+  })
+    .description('告警通知')
 })
 
 export const usage = `
@@ -100,6 +119,10 @@ export const usage = `
 ### 指令：nezha search
 * 基本语法：\`nezha search [name:string]\`
 * 指令功能：搜索名称包含关键字 \`name\` 的服务器状态信息摘要
+
+### 指令：nezha notify
+* 基本语法：\`nezha notify\`
+* 指令功能：**需要公网部署**，获取告警通知请求的部分参数，便于新增通知方式
 `
 
 export function apply(ctx: Context, config: Config) {
@@ -109,6 +132,40 @@ export function apply(ctx: Context, config: Config) {
     token: 'string',
   }, {
     primary: ['userId']
+  })
+
+  const layerName = 'nezha-notify'
+  const processRequest = async (_ctx, next) => {
+    _ctx.body = "OK"
+    const { platform, userId, groupId, content } = _ctx.request.body
+    if (platform && (userId || groupId) && content) {
+      for (let bot of ctx.bots) {
+        if (bot.platform === platform) {
+          try {
+            if (groupId && userId) {
+              await bot.sendMessage(groupId, h('at', { id: userId }) + '<br/>' + content)
+            } else if (userId) {
+              await bot.sendPrivateMessage(userId, h.parse(content))
+            }
+          } catch(error) {
+            logger.error(error)
+          }
+        }
+      }
+    }
+    return next()
+  }
+
+  ctx.on('ready', () => {
+    if (config.alertNotify.enable && ctx.server) {
+      ctx.server.post(layerName, config.alertNotify.path, processRequest)
+    }
+  })
+
+  ctx.on('dispose', () => {
+    if (ctx.server) {
+      ctx.server.stack = ctx.server.stack.filter(layer => layer.name !== layerName)
+    }
   })
 
   const mainCmd = ctx.command('nezha', '用于查询哪吒站点服务器详细信息')
@@ -809,5 +866,28 @@ export function apply(ctx: Context, config: Config) {
       } else {
         return '没有站点数据可供使用，请先使用 nezha add 添加站点数据'
       }
+    })
+
+  mainCmd.subcommand('.notify', '获取告警通知请求的部分参数')
+    .action(async ({ session }) => {
+      if (!config.alertNotify.enable) {
+        return '告警通知未启用'
+      }
+      const message = [
+        `URL：http(s)://YOUR_KOISHI_SITE/${config.alertNotify.path}`,
+        '请求方式：POST',
+        '请求类型：JSON',
+        'Body:',
+        '{',
+        `  "platform": "${session.platform}",`,
+        `  "userId": "${session.userId}",`,
+        `  "groupId": "${session.guildId}",`,
+        `  "content": "${config.alertNotify.bodyContent}"`,
+        '}',
+      ]
+      if (!session.guildId) {
+        message.splice(7, 1)
+      }
+      return message.join('\n')
     })
 }
