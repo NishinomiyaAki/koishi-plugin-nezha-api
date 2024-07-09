@@ -874,7 +874,7 @@ export function apply(ctx: Context, config: Config) {
         return '告警通知未启用'
       }
       const message = [
-        `URL：http(s)://YOUR_KOISHI_SITE/${config.alertNotify.path}`,
+        `URL：http(s)://YOUR_KOISHI_SITE${config.alertNotify.path}`,
         '请求方式：POST',
         '请求类型：JSON',
         'Body:',
