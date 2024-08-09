@@ -175,8 +175,7 @@ export function apply(ctx: Context, config: Config) {
 
       let details = [
         `Hi ${name || session.author.nick || session.author.name || session.username}!`,
-        '此插件用于查询哪吒面板服务器详细信息，哪吒面板项目文档：',
-        'https://nezha.wiki/',
+        '此插件用于查询哪吒面板服务器详细信息',
         '免责声明：',
         '本机器人保证您敏感信息的安全性。',
         '请自行知悉潜在风险。',
