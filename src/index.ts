@@ -168,6 +168,15 @@ export function apply(ctx: Context, config: Config) {
     }
   })
 
+  const truncationUrl = (url: string) => {
+    const siteReg = new RegExp('^https?://', 'i')
+    url = url.replace(siteReg, '')
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1)
+    }
+    return url
+  }
+
   const mainCmd = ctx.command('nezha', '用于查询哪吒站点服务器详细信息')
     .action(async ({ session }) => {
       const { id, name } = await ctx.database.getUser(session.platform, session.userId, ['id', "name"])
@@ -183,7 +192,7 @@ export function apply(ctx: Context, config: Config) {
       ]
       if (data !== undefined) {
         details.push('您的哪吒面板是：')
-        details.push(`${data.url}`)
+        details.push(`${truncationUrl(data.url)}`)
         details.push('使用 nezha all 开始统计数据摘要吧！')
       } else {
         details.push('没有保存的数据。')
@@ -278,7 +287,7 @@ export function apply(ctx: Context, config: Config) {
           })
           let retMsg = '站点数据修改成功'
           if (config.showChangedData) {
-            retMsg += `\n🔗站点地址：${data.url} ➡ ${procUrlRes.url}\n🔑站点Token：${data.token} ➡ ${procTokenRes.token}`
+            retMsg += `\n🔗站点地址：${truncationUrl(data.url)} ➡ ${procUrlRes.url}\n🔑站点Token：${data.token} ➡ ${procTokenRes.token}`
           }
           return retMsg
         } else {
@@ -299,7 +308,7 @@ export function apply(ctx: Context, config: Config) {
         await ctx.database.remove('nezha_site', { userId: id })
         let retMsg = '站点数据删除成功'
         if (config.showChangedData) {
-          retMsg += `\n🔗删除的站点地址：${data.url}\n🔑删除的站点Token：${data.token}`
+          retMsg += `\n🔗删除的站点地址：${truncationUrl(data.url)}\n🔑删除的站点Token：${data.token}`
         }
         return retMsg
       } else {
@@ -324,7 +333,7 @@ export function apply(ctx: Context, config: Config) {
         await ctx.database.set('nezha_site', { userId: id }, { url: procUrlRes.url })
         let retMsg = '站点地址更新成功'
         if (config.showChangedData) {
-          retMsg += `\n🔗站点地址：${data.url} ➡ ${procUrlRes.url}`
+          retMsg += `\n🔗站点地址：${truncationUrl(data.url)} ➡ ${procUrlRes.url}`
         }
         return retMsg
       }
@@ -367,7 +376,7 @@ export function apply(ctx: Context, config: Config) {
       const { id } = await ctx.database.getUser(session.platform, session.userId, ['id'])
       const [ data ] = await ctx.database.get('nezha_site', { userId: id })
       if (data !== undefined) {
-        return `这是您保存的站点数据：\n🔗站点地址：${data.url}\n🔑站点Token：${data.token}`
+        return `这是您保存的站点数据：\n🔗站点地址：${truncationUrl(data.url)}\n🔑站点Token：${data.token}`
       } else {
         return '没有站点数据可供查询，请先使用 nezha add 添加站点数据'
       }
