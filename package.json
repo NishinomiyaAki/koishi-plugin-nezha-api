@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/NishinomiyaAki/koishi-plugin-nezha-api/issues"
   },
-  "version": "1.1.3",
+  "version": "1.2.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -24,7 +24,7 @@
     "nezha"
   ],
   "peerDependencies": {
-    "koishi": "^4.17.9"
+    "koishi": "^4.18.9"
   },
   "koishi": {
     "service": {
