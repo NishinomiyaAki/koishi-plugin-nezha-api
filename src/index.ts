@@ -1250,33 +1250,40 @@ export function apply(ctx: Context, config: Config) {
         const alive = isServerAlive(new Date(serverInfo.last_active).getTime() / 1000)
         const status = alive ? '❇️在线' : '☠️离线'
         let cpuInfo = ''
-        if (serverInfo.host.cpu !== null && serverInfo.host.cpu.length !== 0) {
+        if (serverInfo.host.cpu != null && serverInfo.host.cpu.length !== 0) {
           cpuInfo = serverInfo.host.cpu[0]
         }
-        const memTotal = serverInfo.host.mem_total
-        const memUsed = serverInfo.state.mem_used
-        const swapTotal = serverInfo.host.swap_total
-        const swapUsed = serverInfo.state.swap_used
-        const diskTotal = serverInfo.host.disk_total
-        const diskUsed = serverInfo.state.disk_used
-        const netInTransfer = serverInfo.state.net_in_transfer
-        const netOutTransfer = serverInfo.state.net_out_transfer
-        const netInSpeed = serverInfo.state.net_in_speed
-        const netOutSpeed = serverInfo.state.net_out_speed
+        const memTotal = serverInfo.host.mem_total ?? 0
+        const memUsed = serverInfo.state.mem_used ?? 0
+        const swapTotal = serverInfo.host.swap_total ?? 0
+        const swapUsed = serverInfo.state.swap_used ?? 0
+        const diskTotal = serverInfo.host.disk_total ?? 0
+        const diskUsed = serverInfo.state.disk_used ?? 0
+        const netInTransfer = serverInfo.state.net_in_transfer ?? 0
+        const netOutTransfer = serverInfo.state.net_out_transfer ?? 0
+        const netInSpeed = serverInfo.state.net_in_speed ?? 0
+        const netOutSpeed = serverInfo.state.net_out_speed ?? 0
         const memUsage = memTotal !== 0 ? memUsed / memTotal : 0
         const swapUsage = swapTotal !== 0 ? swapUsed / swapTotal : 0
         const diskUsage = diskTotal !== 0 ? diskUsed / diskTotal : 0
+        const {
+          load_1 = 0,
+          load_5 = 0,
+          load_15 = 0,
+          cpu = 0
+        } = serverInfo.state ?? {}
+        const arch = serverInfo.host.arch ?? ''
         details = [
-          `${getCountryFlag(serverInfo.geoip.country_code)} ${serverInfo.name} ${status}`,
+          `${getCountryFlag(serverInfo.geoip.country_code ?? '')} ${serverInfo.name} ${status}`,
           '===========================',
           `id： ${serverId}`,
           `ipv4： ${maskIPv4(serverInfo.geoip.ip.ipv4_addr)}`,
           `ipv6： ${maskIPv6(serverInfo.geoip.ip.ipv6_addr)}`,
-          `平台： ${serverInfo.host.platform} ${serverInfo.host.platform_version}`,
+          `平台： ${serverInfo.host.platform ?? ''} ${serverInfo.host.platform_version ?? ''}`,
           `CPU信息： ${cpuInfo}`,
-          `运行时间： ${convertTime(serverInfo.host.boot_time)}`,
-          `负载： ${serverInfo.state.load_1.toFixed(2)} ${serverInfo.state.load_5.toFixed(2)} ${serverInfo.state.load_15.toFixed(2)}`,
-          `CPU： ${serverInfo.state.cpu.toFixed(2)}% [${serverInfo.host.arch}]`,
+          `运行时间： ${convertTime(serverInfo.host.boot_time ?? 0)}`,
+          `负载： ${load_1.toFixed(2)} ${load_5.toFixed(2)} ${load_15.toFixed(2)}`,
+          `CPU： ${cpu.toFixed(2)}% [${arch}]`,
           `内存： ${percentage(memUsage)} [${naturalsize(memUsed)}/${naturalsize(memTotal)}]`,
           `交换： ${percentage(swapUsage)} [${naturalsize(swapUsed)}/${naturalsize(swapTotal)}]`,
           `磁盘： ${percentage(diskUsage)} [${naturalsize(diskUsed)}/${naturalsize(diskTotal)}]`,
