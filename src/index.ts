@@ -1,5 +1,6 @@
 import { Context, Logger, Schema, h } from 'koishi'
 import { } from '@koishijs/plugin-server'
+import { isIP } from 'node:net'
 
 declare module 'koishi' {
   interface Tables {
@@ -147,12 +148,12 @@ export const usage = `
 ### 指令：nezha id
 * 基本语法：\`nezha id <type:string> [id:number]\`
 * 指令功能：获取ID为 \`id\` 的服务器详细信息
-* 使用限制：仅支持 \`NezhaV0\` 和 \`NezhaV1\` 站点
+* 使用限制：仅支持 \`NezhaV0\` 和 \`NezhaV1\` 站点，支持交互式输入
 
 ### 指令：nezha uuid
-* 基本语法：\`nezha uuid <uuid:string>\`
+* 基本语法：\`nezha uuid [uuid:string]\`
 * 指令功能：获取UUID为 \`uuid\` 的服务器详细信息
-* 使用限制：仅支持 \`Komari\` 站点
+* 使用限制：仅支持 \`Komari\` 站点，支持交互式输入
 
 ### 指令：nezha search
 * 基本语法：\`nezha search <name:string>\`
@@ -264,16 +265,7 @@ export function apply(ctx: Context, config: Config) {
         details.push('没有保存的数据。')
         details.push('使用 nezha add 开始添加你的站点数据！')
       }
-      const [msgId] = await session.sendQueued(details.join('\n'))
-      if (await inChannel(session.platform, session.channelId) && config.channelRecall) {
-        ctx.setTimeout(async () => {
-          try {
-            await session.bot.deleteMessage(session.channelId, msgId)
-          } catch (error) {
-            logger.warn(error)
-          }
-        }, config.recallTime)
-      }
+      await sendQueuedWithRecall(session, details.join('\n'))
       return
     })
 
@@ -340,6 +332,25 @@ export function apply(ctx: Context, config: Config) {
   const inChannel = async (platform, channelId) => {
     const channelData = await ctx.database.getChannel(platform, channelId)
     return channelData !== undefined
+  }
+
+  const getQueuedMessageId = (sendResult) => {
+    return Array.isArray(sendResult) ? sendResult[0] : sendResult
+  }
+
+  const sendQueuedWithRecall = async (session, content: string) => {
+    const sendResult = await session.sendQueued(content)
+    const msgId = getQueuedMessageId(sendResult)
+    if (msgId && await inChannel(session.platform, session.channelId) && config.channelRecall) {
+      ctx.setTimeout(async () => {
+        try {
+          await session.bot.deleteMessage(session.channelId, msgId)
+        } catch (error) {
+          logger.warn(error)
+        }
+      }, config.recallTime)
+    }
+    return sendResult
   }
 
   mainCmd.subcommand('.add <type:string> [url:string] [input1:string] [input2:string]', '添加站点数据')
@@ -922,16 +933,7 @@ export function apply(ctx: Context, config: Config) {
         }
 
         retMsg.push(`更新于： ${getNow()}`)
-        const [msgId] = await session.sendQueued(retMsg.join('\n'))
-        if (await inChannel(session.platform, session.channelId) && config.channelRecall) {
-          ctx.setTimeout(async () => {
-            try {
-              await session.bot.deleteMessage(session.channelId, msgId)
-            } catch (error) {
-              logger.warn(error)
-            }
-          }, config.recallTime)
-        }
+        await sendQueuedWithRecall(session, retMsg.join('\n'))
         return
       } else {
         return '没有站点数据可供使用，请先使用 nezha add 添加站点数据'
@@ -954,7 +956,7 @@ export function apply(ctx: Context, config: Config) {
         const alive = isServerAlive(serverInfo.last_active)
         serverNum += 1
         offlineNum += alive ? 0 : 1
-        dualNum += serverInfo.ipv4 !== '' && serverInfo.ipv6 !== '' ? 1 : 0
+        dualNum += isDualStackServer(serverInfo.ipv4, serverInfo.ipv6) ? 1 : 0
       }
       info.push(`服务器数量： ${serverNum}`)
       if (tag === '') {
@@ -972,7 +974,7 @@ export function apply(ctx: Context, config: Config) {
         const alive = isServerAlive(new Date(serverInfo.last_active).getTime() / 1000)
         serverNum += 1
         offlineNum += alive ? 0 : 1
-        dualNum += serverInfo.geoip.ip.ipv4_addr !== '' && serverInfo.geoip.ip.ipv6_addr !== '' ? 1 : 0
+        dualNum += isDualStackServer(serverInfo.geoip.ip.ipv4_addr, serverInfo.geoip.ip.ipv6_addr) ? 1 : 0
       }
       info.push(`服务器数量： ${serverNum}`)
       info.push(`离线服务器： ${offlineNum}`)
@@ -1097,16 +1099,7 @@ export function apply(ctx: Context, config: Config) {
           retMsg.push('访问站点失败，请联系管理员确认错误信息')
         }
 
-        const [msgId] = await session.sendQueued(retMsg.join('\n'))
-        if (await inChannel(session.platform, session.channelId) && config.channelRecall) {
-          ctx.setTimeout(async () => {
-            try {
-              await session.bot.deleteMessage(session.channelId, msgId)
-            } catch (error) {
-              logger.warn(error)
-            }
-          }, config.recallTime)
-        }
+        await sendQueuedWithRecall(session, retMsg.join('\n'))
         return
       } else {
         return '没有站点数据可供使用，请先使用 nezha add 添加站点数据'
@@ -1171,6 +1164,30 @@ export function apply(ctx: Context, config: Config) {
     }
   }
 
+  const normalizeIpValue = (value) => {
+    if (typeof value !== 'string') {
+      return ''
+    }
+    const normalized = value.trim()
+    const lower = normalized.toLowerCase()
+    if (normalized === '' || lower === 'null' || lower === 'undefined') {
+      return ''
+    }
+    return normalized
+  }
+
+  const hasIPv4Address = (value) => {
+    return isIP(normalizeIpValue(value)) === 4
+  }
+
+  const hasIPv6Address = (value) => {
+    return isIP(normalizeIpValue(value)) === 6
+  }
+
+  const isDualStackServer = (ipv4, ipv6) => {
+    return hasIPv4Address(ipv4) && hasIPv6Address(ipv6)
+  }
+
   const convertTime = (bootTime) => {
     if (bootTime === 0) {
       return '未运行'
@@ -1201,7 +1218,10 @@ export function apply(ctx: Context, config: Config) {
   const generateDetailsById = (data: NezhaSiteV1, res, serverId) => {
     let details = []
     if (data.type === "v0") {
-      const serverInfo = res.result[0]
+      const serverInfo = res.result.find((item) => item?.id === serverId)
+      if (!serverInfo) {
+        return details
+      }
       const alive = isServerAlive(serverInfo.last_active)
       const status = alive ? '❇️在线' : '☠️离线'
       let cpuInfo = ''
@@ -1296,7 +1316,7 @@ export function apply(ctx: Context, config: Config) {
     return details
   }
 
-  mainCmd.subcommand('.id <type:string> <serverId:integer>', '通过id查询服务器详细信息')
+  mainCmd.subcommand('.id <type:string> [serverId:integer]', '通过id查询服务器详细信息')
     .action(async ({ session }, type, serverId) => {
       const procTypeRes = await processType(session, type)
       if (typeof procTypeRes === 'string') {
@@ -1335,16 +1355,10 @@ export function apply(ctx: Context, config: Config) {
           }
 
           const details = generateDetailsById(data, res, serverId)
-          const [msgId] = await session.sendQueued(details.join('\n'))
-          if (await inChannel(session.platform, session.channelId) && config.channelRecall) {
-            ctx.setTimeout(async () => {
-              try {
-                await session.bot.deleteMessage(session.channelId, msgId)
-              } catch (error) {
-                logger.warn(error)
-              }
-            }, config.recallTime)
+          if (details.length === 0) {
+            return `未找到ID为 ${serverId} 的服务器。`
           }
+          await sendQueuedWithRecall(session, details.join('\n'))
           return
         }
         return `访问站点失败，请联系管理员确认错误信息`
@@ -1398,7 +1412,7 @@ export function apply(ctx: Context, config: Config) {
     return details
   }
 
-  mainCmd.subcommand('.uuid <uuid:string>', '通过uuid查询服务器详细信息')
+  mainCmd.subcommand('.uuid [uuid:string]', '通过uuid查询服务器详细信息')
     .action(async ({ session }, uuid) => {
       if (uuid === undefined) {
         session.sendQueued('请输入服务器UUID')
@@ -1434,16 +1448,10 @@ export function apply(ctx: Context, config: Config) {
           }
 
           const details = generateDetailsByUUID(data, res, komariStatus?.data, uuid)
-          const [msgId] = await session.sendQueued(details.join('\n'))
-          if (await inChannel(session.platform, session.channelId) && config.channelRecall) {
-            ctx.setTimeout(async () => {
-              try {
-                await session.bot.deleteMessage(session.channelId, msgId)
-              } catch (error) {
-                logger.warn(error)
-              }
-            }, config.recallTime)
+          if (details.length === 0) {
+            return `未找到UUID为 ${uuid} 的服务器。`
           }
+          await sendQueuedWithRecall(session, details.join('\n'))
           return
         }
         return `访问站点失败，请联系管理员确认错误信息`
@@ -1555,16 +1563,7 @@ export function apply(ctx: Context, config: Config) {
           retMsg.push('访问站点失败，请联系管理员确认错误信息')
         }
 
-        const [msgId] = await session.sendQueued(retMsg.join('\n'))
-        if (await inChannel(session.platform, session.channelId) && config.channelRecall) {
-          ctx.setTimeout(async () => {
-            try {
-              await session.bot.deleteMessage(session.channelId, msgId)
-            } catch (error) {
-              logger.warn(error)
-            }
-          }, config.recallTime)
-        }
+        await sendQueuedWithRecall(session, retMsg.join('\n'))
         return
       } else {
         return '没有站点数据可供使用，请先使用 nezha add 添加站点数据'

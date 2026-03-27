@@ -12,6 +12,7 @@ tsconfig.tsbuildinfo
 .DS_Store
 .idea
 .vscode
+CLAUDE.md
 *.suo
 *.ntvs*
 *.njsproj
